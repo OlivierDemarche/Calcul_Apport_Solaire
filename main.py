@@ -30,7 +30,7 @@ API_KEY_OWM = os.environ["API_KEY_OWM"]
 # --------------------------- API ------------------------------
 # --------------------------------------------------------------
 # -------- CLOUD COVERAGE DATA [%] --------
-def obtenir_couverture_nuageuse():
+def get_cloud_coverage():
     endpoint = "http://api.openweathermap.org/data/2.5/weather"
     params = {
         'lat': LAT,
@@ -95,7 +95,7 @@ def get_irr_vertical_surface(dni, dhi, ghi,azimtuh_facade, solar_azimuth):
 
 
 # -------- CALCULATE ON ORIENTED SURFACE WITH TRIGO --------
-def calcul_irradiance_trigo(dni, dhi, ghi, elevation, solar_azimuth, facade_azimuth):
+def irradiance_trigo(dni, dhi, ghi, elevation, solar_azimuth, facade_azimuth):
     # Conversion des angles en radians si nécessaire
     elevation_rad = elevation * (math.pi / 180)
     solar_azimuth_rad = solar_azimuth * (math.pi / 180)
@@ -182,8 +182,8 @@ def get_city_name(latitude, longitude):
     return address
 
 
-def affichage_resultats(correction, cloud, ghi, dni, dhi, irr_pvlib, irr_trigo, irr_final_pvlib, irr_final_trigo,
-                        apport_pvlib, apport_trigo, facteur_solaire, facade, facade_azimuth, window_surface):
+def printing_results(correction, cloud, ghi, dni, dhi, irr_pvlib, irr_trigo, irr_final_pvlib, irr_final_trigo,
+                     apport_pvlib, apport_trigo, facteur_solaire, facade, facade_azimuth, window_surface):
     if correction:
         print("\n--------------------------------------------------------")
         print("Valeurs corrigées AVEC COUVERTURE NUAGEUSE :")
@@ -207,16 +207,16 @@ def affichage_resultats(correction, cloud, ghi, dni, dhi, irr_pvlib, irr_trigo, 
 # -------------------------- MAIN FUNCTION ---------------------
 # --------------------------------------------------------------
 
-def calcul_apport_facade(azimtuh_facade, elevation, solar_azimuth, dni, dhi, ghi, corrected_dni, window_surface,facteur_solaire):
+def solar_gain_building_side(azimtuh_facade, elevation, solar_azimuth, dni, dhi, ghi, corrected_dni, window_surface,facteur_solaire):
     irr_pvlib = get_irr_vertical_surface(dni=dni, dhi=dhi, ghi=ghi, solar_azimuth=solar_azimuth, azimtuh_facade=azimtuh_facade)
-    irr_trigo = calcul_irradiance_trigo(dni=dni, dhi=dhi, ghi=ghi, elevation=elevation, solar_azimuth=solar_azimuth,facade_azimuth=azimtuh_facade)
+    irr_trigo = irradiance_trigo(dni=dni, dhi=dhi, ghi=ghi, elevation=elevation, solar_azimuth=solar_azimuth, facade_azimuth=azimtuh_facade)
     irr_finale_pvlib = facteur_solaire * irr_pvlib
     irr_finale_trigo = facteur_solaire * irr_trigo
     apport_puissance_pvlib = window_surface * irr_finale_pvlib
     apport_puissance_trigo = window_surface * irr_finale_trigo
     # -------- CORRECTIONS DES PARAMETRES EN PRESENCE DE COUVERTURE NUAGEUSE --------
     corr_irr_pvlib = get_irr_vertical_surface(dni=corrected_dni, dhi=dhi, ghi=ghi, solar_azimuth=solar_azimuth, azimtuh_facade=azimtuh_facade)
-    corr_irr_trigo = calcul_irradiance_trigo(dni=corrected_dni, dhi=dhi, ghi=ghi, elevation=elevation,solar_azimuth=solar_azimuth, facade_azimuth=azimtuh_facade)
+    corr_irr_trigo = irradiance_trigo(dni=corrected_dni, dhi=dhi, ghi=ghi, elevation=elevation, solar_azimuth=solar_azimuth, facade_azimuth=azimtuh_facade)
     corr_irr_finale_pvlib = facteur_solaire * corr_irr_pvlib
     corr_irr_finale_trigo = facteur_solaire * corr_irr_trigo
     corr_apport_puissance_pvlib = window_surface * corr_irr_finale_pvlib
@@ -224,36 +224,36 @@ def calcul_apport_facade(azimtuh_facade, elevation, solar_azimuth, dni, dhi, ghi
     orientation_facade = get_direction(azimtuh_facade)
     print(f"\nFaçade {orientation_facade} : ")
     # -------- AFFICHAGE RESULTATS --------
-    affichage_resultats(correction=False,
-                        cloud=0,
-                        ghi=ghi,
-                        dni=dni,
-                        dhi=dhi,
-                        irr_pvlib=irr_pvlib,
-                        irr_trigo=irr_trigo,
-                        irr_final_pvlib=irr_finale_pvlib,
-                        irr_final_trigo=irr_finale_trigo,
-                        apport_pvlib=apport_puissance_pvlib,
-                        apport_trigo=apport_puissance_trigo,
-                        facteur_solaire=facteur_solaire,
-                        facade=orientation_facade,
-                        facade_azimuth=azimtuh_facade,
-                        window_surface=window_surface)
-    affichage_resultats(correction=True,
-                        cloud=cloud_percentage,
-                        ghi=ghi,
-                        dni=cloud_corrected_dni,
-                        dhi=dhi,
-                        irr_pvlib=corr_irr_pvlib,
-                        irr_trigo=corr_irr_trigo,
-                        irr_final_pvlib=corr_irr_finale_pvlib,
-                        irr_final_trigo=corr_irr_finale_trigo,
-                        apport_pvlib=corr_apport_puissance_pvlib,
-                        apport_trigo=corr_apport_puissance_trigo,
-                        facteur_solaire=facteur_solaire,
-                        facade=orientation_facade,
-                        facade_azimuth=azimtuh_facade,
-                        window_surface=window_surface)
+    printing_results(correction=False,
+                     cloud=0,
+                     ghi=ghi,
+                     dni=dni,
+                     dhi=dhi,
+                     irr_pvlib=irr_pvlib,
+                     irr_trigo=irr_trigo,
+                     irr_final_pvlib=irr_finale_pvlib,
+                     irr_final_trigo=irr_finale_trigo,
+                     apport_pvlib=apport_puissance_pvlib,
+                     apport_trigo=apport_puissance_trigo,
+                     facteur_solaire=facteur_solaire,
+                     facade=orientation_facade,
+                     facade_azimuth=azimtuh_facade,
+                     window_surface=window_surface)
+    printing_results(correction=True,
+                     cloud=cloud_percentage,
+                     ghi=ghi,
+                     dni=cloud_corrected_dni,
+                     dhi=dhi,
+                     irr_pvlib=corr_irr_pvlib,
+                     irr_trigo=corr_irr_trigo,
+                     irr_final_pvlib=corr_irr_finale_pvlib,
+                     irr_final_trigo=corr_irr_finale_trigo,
+                     apport_pvlib=corr_apport_puissance_pvlib,
+                     apport_trigo=corr_apport_puissance_trigo,
+                     facteur_solaire=facteur_solaire,
+                     facade=orientation_facade,
+                     facade_azimuth=azimtuh_facade,
+                     window_surface=window_surface)
     return corr_apport_puissance_pvlib, corr_apport_puissance_trigo
 
 
@@ -266,7 +266,7 @@ if __name__ == "__main__":
     azimuth, elevation = get_solar_position()
     dni, dhi, ghi = get_clear_sky_rad(LAT, LONG)
     city_name = get_city_name(LAT, LONG)
-    cloud_percentage = obtenir_couverture_nuageuse()
+    cloud_percentage = get_cloud_coverage()
     cloud_corrected_dni = calculate_real_dni(dni=dni)
     print("------------------------------------------------------------------------------------------------")
     print("Données :")
@@ -279,7 +279,7 @@ if __name__ == "__main__":
     trigo_total = 0
     for facade, surface in zip(BAT_AZIMUTH, SURFACE_VITRAGE):
         print("------------------------------------------------------------------------------------------------")
-        apport_pvlib, apport_trigo = calcul_apport_facade(azimtuh_facade=facade,
+        apport_pvlib, apport_trigo = solar_gain_building_side(azimtuh_facade=facade,
                                                           elevation=elevation,
                                                           solar_azimuth=azimuth,
                                                           dni=dni, dhi=dhi,

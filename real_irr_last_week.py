@@ -3,7 +3,7 @@ from datetime import timedelta
 from io import StringIO
 import pandas as pd
 import requests
-from main import LAT, API_KEY, LONG, TODAY, get_irr_vertical_surface, calcul_irradiance_trigo, FACTEUR_SOLAIRE, get_solar_position, get_city_name
+from main import LAT, API_KEY, LONG, TODAY, get_irr_vertical_surface, irradiance_trigo, FACTEUR_SOLAIRE, get_solar_position, get_city_name
 
 azimuth, elevation = get_solar_position()
 
@@ -40,8 +40,8 @@ def calcul_reel_semaine_pre():
     if ghi_last_week != 0:
         dhi_last_week = ghi_last_week - (math.cos((90 - elevation) * (math.pi / 180)) * dni_last_week)
         last_week_irr_pvlib = get_irr_vertical_surface(dni=dni_last_week, dhi=dhi_last_week)
-        last_week_irr_trigo = calcul_irradiance_trigo(dni=dni_last_week, dhi=dhi_last_week, elevation=elevation,
-                                                      solar_azimuth=azimuth)
+        last_week_irr_trigo = irradiance_trigo(dni=dni_last_week, dhi=dhi_last_week, elevation=elevation,
+                                               solar_azimuth=azimuth)
         last_week_irr_finale_pvlib = FACTEUR_SOLAIRE * last_week_irr_pvlib
         last_week_irr_finale_trigo = FACTEUR_SOLAIRE * last_week_irr_trigo
         print("Résultat :\n")
