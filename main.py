@@ -117,6 +117,7 @@ def irradiance_trigo(dni, dhi, ghi, solar_angle, solar_azimuth, facade_azimuth):
 # ------------------------ OTHERS FUNCTIONS --------------------
 # --------------------------------------------------------------
 
+# -------- CREATE CONDITION FOR DIRECT RADIANCE --------
 def dni_orientation_condition(facade_azimuth, solar_azimuth):
     if facade_azimuth < 90:
         condition_inf = 360 - (90 - facade_azimuth)
@@ -149,8 +150,7 @@ def get_solar_position():
     return solar_azimuth, tilt
 
 
-# -------- GET LOCALISATION FROM LAT/LONG --------
-
+# -------- GET ORIENTATION FROM BUILDING AZIMUTH --------
 def get_direction(orientation):
     directions = {
         (0, 11.25): 'Nord',
@@ -177,6 +177,7 @@ def get_direction(orientation):
     return 'Inconnu'
 
 
+# -------- GET LOCALISATION FROM LAT/LONG --------
 def get_city_name(latitude, longitude):
     geolocator = Nominatim(user_agent="my_geocoder")
     location = geolocator.reverse((latitude, longitude), language='fr')
