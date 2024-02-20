@@ -268,6 +268,7 @@ if __name__ == "__main__":
     city_name = get_city_name(LAT, LONG)
     cloud_percentage = get_cloud_coverage()
     cloud_corrected_dni = calculate_real_dni(dni=dni)
+    # ------------ AFFICHAGE DES DONNEES -----------
     print("------------------------------------------------------------------------------------------------")
     print("Données :")
     print("------------")
@@ -275,6 +276,7 @@ if __name__ == "__main__":
     print(f"Azimut du soleil: {azimuth} °")
     print(f"Angle d'inclinaison du soleil: {elevation} °")
     print(f"Le calcul sera effectué sur {len(BAT_AZIMUTH)} façade(s)")
+    # ------------ CALCULS DES APPORTS PAR FACADES -----------
     pv_lib_total = 0
     trigo_total = 0
     for facade, surface in zip(BAT_AZIMUTH, SURFACE_VITRAGE):
@@ -289,6 +291,7 @@ if __name__ == "__main__":
                                                           facteur_solaire=FACTEUR_SOLAIRE)
         pv_lib_total += apport_pvlib
         trigo_total += apport_trigo
+    # ------------ AFFICHAGE DES RESULTATS -----------
     print("\n--------------------------------------------------------")
     print("Résultats :")
     print("--------------------------------------------------------")
