@@ -9,15 +9,15 @@ from geopy.geocoders import Nominatim
 # --------------------------------------------------------------
 # -------------------------- PARAMETRES ------------------------
 # --------------------------------------------------------------
-BAT_AZIMUTH = [115, 205] # Azimuth des différentes façades
-SURFACE_VITRAGE = [153.5, 25] # Surface de vitrage en présence sur les façades respectives
+BAT_AZIMUTH = [115, 205]  # Azimuth des différentes façades
+SURFACE_VITRAGE = [153.5, 25]  # Surface de vitrage en présence sur les façades respectives
 FACTEUR_SOLAIRE = 0.37  # Facteur solaire pour double vitrage HR
 ANGLE_CONDITION = 10  # Condition d'élévation solaire minimale (dépends de la présence de bâtiment, d'ombrage,...)
 LAT = float(os.environ["LAT"])  # Latitude du lieu à étudier
 LONG = float(os.environ["LONG"])  # Longitude du lieu à étudier
 ALTITUDE = 66  # Altitude du lieu à étudier
 TODAY = dt.now()  # Date
-RHO = 0.15 # Albedo du sol en ville
+RHO = 0.15  # Albedo du sol en ville
 
 # --------------------------------------------------------------
 # ------------------------ CONSTANTS ---------------------------
@@ -29,6 +29,8 @@ API_KEY_OWM = os.environ["API_KEY_OWM"]
 # --------------------------------------------------------------
 # --------------------------- API ------------------------------
 # --------------------------------------------------------------
+
+
 # -------- CLOUD COVERAGE DATA [%] --------
 def get_cloud_coverage():
     endpoint = "http://api.openweathermap.org/data/2.5/weather"
@@ -54,6 +56,8 @@ def get_cloud_coverage():
 # --------------------------------------------------------------
 # ------------------------ IRRADIANCE --------------------------
 # --------------------------------------------------------------
+
+
 # -------- CLEAR SKY DATA --------
 def get_clear_sky_rad(latitude, longitude):
     date = pd.date_range(TODAY, TODAY, freq='1h', tz='UTC')
@@ -69,7 +73,7 @@ def get_clear_sky_rad(latitude, longitude):
 
 
 # -------- CALCULATE ON ORIENTED SURFACE WITH PVLIB --------
-def get_irr_vertical_surface(dni, dhi, ghi,azimtuh_facade, solar_azimuth):
+def get_irr_vertical_surface(dni, dhi, ghi, azimtuh_facade, solar_azimuth):
     weather_data = pd.DataFrame(index=[TODAY])
     weather_data['dni'] = dni
     if dni_orientation_condition(facade_azimuth=azimtuh_facade, solar_azimuth=solar_azimuth):
@@ -80,8 +84,6 @@ def get_irr_vertical_surface(dni, dhi, ghi,azimtuh_facade, solar_azimuth):
     weather_data['ghi'] = ghi
     # Calcul de la position solaire pour l'heure spécifique
     solpos = pvlib.solarposition.get_solarposition(time=weather_data.index, latitude=LAT, longitude=LONG)
-    # Calcul de l'irradiance extraterrestre directe
-    dni_extra = pvlib.irradiance.get_extra_radiation(weather_data.index)
     # Calcul de l'irradiance sur la paroi sud-est verticale
     effective_irradiance_wall = pvlib.irradiance.get_total_irradiance(surface_tilt=90, surface_azimuth=azimtuh_facade,
                                                                       solar_zenith=solpos['apparent_zenith'],
@@ -95,16 +97,16 @@ def get_irr_vertical_surface(dni, dhi, ghi,azimtuh_facade, solar_azimuth):
 
 
 # -------- CALCULATE ON ORIENTED SURFACE WITH TRIGO --------
-def irradiance_trigo(dni, dhi, ghi, elevation, solar_azimuth, facade_azimuth):
+def irradiance_trigo(dni, dhi, ghi, solar_angle, solar_azimuth, facade_azimuth):
     # Conversion des angles en radians si nécessaire
-    elevation_rad = elevation * (math.pi / 180)
+    elevation_rad = solar_angle * (math.pi / 180)
     solar_azimuth_rad = solar_azimuth * (math.pi / 180)
     facade_azimuth_rad = facade_azimuth * (math.pi / 180)
-    if ANGLE_CONDITION < elevation < 90 and dni_orientation_condition(facade_azimuth=facade_azimuth,solar_azimuth=solar_azimuth):
+    if ANGLE_CONDITION < solar_angle < 90 and dni_orientation_condition(facade_azimuth=facade_azimuth, solar_azimuth=solar_azimuth):
         direct_component = dni * math.cos(elevation_rad) * math.cos(solar_azimuth_rad - facade_azimuth_rad)
     else:
         direct_component = 0
-    b = dhi * ((1 + math.cos(90 * (math.pi / 180))) / 2) + ((dhi * math.sin(elevation_rad))/2) # radiateur diffuse isotrope + diffusion vers le bas
+    b = dhi * ((1 + math.cos(90 * (math.pi / 180))) / 2) + ((dhi * math.sin(elevation_rad))/2)  # radiateur diffuse isotrope + diffusion vers le bas
     c = ghi * RHO * ((1 - math.cos(elevation_rad)) / 2)
     diffuse = b + c
     irr = direct_component + diffuse
@@ -177,13 +179,13 @@ def get_direction(orientation):
 
 def get_city_name(latitude, longitude):
     geolocator = Nominatim(user_agent="my_geocoder")
-    location = geolocator.reverse((latitude, longitude),language='fr')
+    location = geolocator.reverse((latitude, longitude), language='fr')
     address = location.address if location else None
     return address
 
 
 def printing_results(correction, cloud, ghi, dni, dhi, irr_pvlib, irr_trigo, irr_final_pvlib, irr_final_trigo,
-                     apport_pvlib, apport_trigo, facteur_solaire, facade, facade_azimuth, window_surface):
+                     pvlib_result, trigo_result, facteur_solaire, side, facade_azimuth, window_surface):
     if correction:
         print("\n--------------------------------------------------------")
         print("Valeurs corrigées AVEC COUVERTURE NUAGEUSE :")
@@ -198,25 +200,25 @@ def printing_results(correction, cloud, ghi, dni, dhi, irr_pvlib, irr_trigo, irr
     print(f"Calculée avec PVLIB : {irr_pvlib} [W/m2]")
     print(f"Calculée par trigonométrique : {irr_trigo} [W/m2]")
     print(f"\nIrradiance finale qui traverse le double vitrage ( g = {facteur_solaire}) est de : \nPVLIB : {irr_final_pvlib} [W/m2]\nTRIGO : {irr_final_trigo} [W/m2]")
-    print(f"\nRésultats de l'apport solaire sur la façade {facade} comportant {window_surface} m2 de double vitrage HR (g={facteur_solaire}) :")
-    print(f"Calculé via PVLIB : {apport_pvlib} Watts")
-    print(f"Calculé via TRIGO : {apport_trigo} Watts")
+    print(f"\nRésultats de l'apport solaire sur la façade {side} comportant {window_surface} m2 de double vitrage HR (g={facteur_solaire}) :")
+    print(f"Calculé via PVLIB : {pvlib_result} Watts")
+    print(f"Calculé via TRIGO : {trigo_result} Watts")
 
 
 # --------------------------------------------------------------
 # -------------------------- MAIN FUNCTION ---------------------
 # --------------------------------------------------------------
 
-def solar_gain_building_side(azimtuh_facade, elevation, solar_azimuth, dni, dhi, ghi, corrected_dni, window_surface,facteur_solaire):
+def solar_gain_building_side(azimtuh_facade, solar_angle, solar_azimuth, dni, dhi, ghi, corrected_dni, window_surface, facteur_solaire):
     irr_pvlib = get_irr_vertical_surface(dni=dni, dhi=dhi, ghi=ghi, solar_azimuth=solar_azimuth, azimtuh_facade=azimtuh_facade)
-    irr_trigo = irradiance_trigo(dni=dni, dhi=dhi, ghi=ghi, elevation=elevation, solar_azimuth=solar_azimuth, facade_azimuth=azimtuh_facade)
+    irr_trigo = irradiance_trigo(dni=dni, dhi=dhi, ghi=ghi, solar_angle=solar_angle, solar_azimuth=solar_azimuth, facade_azimuth=azimtuh_facade)
     irr_finale_pvlib = facteur_solaire * irr_pvlib
     irr_finale_trigo = facteur_solaire * irr_trigo
     apport_puissance_pvlib = window_surface * irr_finale_pvlib
     apport_puissance_trigo = window_surface * irr_finale_trigo
     # -------- CORRECTIONS DES PARAMETRES EN PRESENCE DE COUVERTURE NUAGEUSE --------
     corr_irr_pvlib = get_irr_vertical_surface(dni=corrected_dni, dhi=dhi, ghi=ghi, solar_azimuth=solar_azimuth, azimtuh_facade=azimtuh_facade)
-    corr_irr_trigo = irradiance_trigo(dni=corrected_dni, dhi=dhi, ghi=ghi, elevation=elevation, solar_azimuth=solar_azimuth, facade_azimuth=azimtuh_facade)
+    corr_irr_trigo = irradiance_trigo(dni=corrected_dni, dhi=dhi, ghi=ghi, solar_angle=solar_angle, solar_azimuth=solar_azimuth, facade_azimuth=azimtuh_facade)
     corr_irr_finale_pvlib = facteur_solaire * corr_irr_pvlib
     corr_irr_finale_trigo = facteur_solaire * corr_irr_trigo
     corr_apport_puissance_pvlib = window_surface * corr_irr_finale_pvlib
@@ -233,10 +235,10 @@ def solar_gain_building_side(azimtuh_facade, elevation, solar_azimuth, dni, dhi,
                      irr_trigo=irr_trigo,
                      irr_final_pvlib=irr_finale_pvlib,
                      irr_final_trigo=irr_finale_trigo,
-                     apport_pvlib=apport_puissance_pvlib,
-                     apport_trigo=apport_puissance_trigo,
+                     pvlib_result=apport_puissance_pvlib,
+                     trigo_result=apport_puissance_trigo,
                      facteur_solaire=facteur_solaire,
-                     facade=orientation_facade,
+                     side=orientation_facade,
                      facade_azimuth=azimtuh_facade,
                      window_surface=window_surface)
     printing_results(correction=True,
@@ -248,10 +250,10 @@ def solar_gain_building_side(azimtuh_facade, elevation, solar_azimuth, dni, dhi,
                      irr_trigo=corr_irr_trigo,
                      irr_final_pvlib=corr_irr_finale_pvlib,
                      irr_final_trigo=corr_irr_finale_trigo,
-                     apport_pvlib=corr_apport_puissance_pvlib,
-                     apport_trigo=corr_apport_puissance_trigo,
+                     pvlib_result=corr_apport_puissance_pvlib,
+                     trigo_result=corr_apport_puissance_trigo,
                      facteur_solaire=facteur_solaire,
-                     facade=orientation_facade,
+                     side=orientation_facade,
                      facade_azimuth=azimtuh_facade,
                      window_surface=window_surface)
     return corr_apport_puissance_pvlib, corr_apport_puissance_trigo
@@ -282,13 +284,13 @@ if __name__ == "__main__":
     for facade, surface in zip(BAT_AZIMUTH, SURFACE_VITRAGE):
         print("------------------------------------------------------------------------------------------------")
         apport_pvlib, apport_trigo = solar_gain_building_side(azimtuh_facade=facade,
-                                                          elevation=elevation,
-                                                          solar_azimuth=azimuth,
-                                                          dni=dni, dhi=dhi,
-                                                          ghi=ghi,
-                                                          corrected_dni=cloud_corrected_dni,
-                                                          window_surface=surface,
-                                                          facteur_solaire=FACTEUR_SOLAIRE)
+                                                              solar_angle=elevation,
+                                                              solar_azimuth=azimuth,
+                                                              dni=dni, dhi=dhi,
+                                                              ghi=ghi,
+                                                              corrected_dni=cloud_corrected_dni,
+                                                              window_surface=surface,
+                                                              facteur_solaire=FACTEUR_SOLAIRE)
         pv_lib_total += apport_pvlib
         trigo_total += apport_trigo
     # ------------ AFFICHAGE DES RESULTATS -----------
